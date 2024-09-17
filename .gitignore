@@ -169,3 +169,4 @@ src
 
 # Etc
 .DS_Store
+/weights/

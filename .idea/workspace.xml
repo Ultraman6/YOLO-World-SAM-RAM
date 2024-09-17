@@ -4,77 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2ae9d6a2-52cc-4e07-bacc-08375f505db6" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/hico/hico_600_annots.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/hico/hico_600_taglist.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/imagenet_multi/imagenet_multi_1000_annots.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/imagenet_multi/imagenet_multi_1000_taglist.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/openimages_common_214/imgs/.gitkeep" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/openimages_common_214/openimages_common_214_ram_annots.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/openimages_common_214/openimages_common_214_ram_taglist.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/openimages_common_214/openimages_common_214_tag2text_idannots.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/openimages_common_214/openimages_common_214_tag2text_tagidlist.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/openimages_rare_200/imgs/.gitkeep" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/openimages_rare_200/openimages_rare_200_llm_tag_descriptions.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/openimages_rare_200/openimages_rare_200_ram_annots.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/openimages_rare_200/openimages_rare_200_ram_taglist.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/1641173_2291260800.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/demo/demo1.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/demo/demo2.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/demo/demo3.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/demo/demo4.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/experiment_comparison.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/localization_and_recognition.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/openset_example.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/ram_grounded_sam.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/ram_plus_compare.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/ram_plus_experiment.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/ram_plus_framework.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/ram_plus_visualization.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/tag2text_framework.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/tag2text_grounded_sam.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/tag2text_retrieval_visualization.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/tag2text_visualization.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/tagging_results.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/inference_ram_plus_openset.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/configs/finetune.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/configs/finetune_tag2text.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/configs/med_config.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/configs/pretrain.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/configs/pretrain_tag2text.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/configs/q2l_config.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/configs/swin/config_swinB_224.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/configs/swin/config_swinB_384.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/configs/swin/config_swinL_224.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/configs/swin/config_swinL_384.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/data/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/data/dataset.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/data/ram_tag_list.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/data/ram_tag_list_chinese.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/data/ram_tag_list_threshold.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/data/randaugment.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/data/tag2text_ori_tag_list.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/data/tag_list.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/data/utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/inference.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/models/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/models/bert.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/models/ram.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/models/ram_plus.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/models/swin_transformer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/models/tag2text.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/models/utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/models/vit.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/transform.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/utils/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/utils/metrics.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ram/utils/openset_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-    </list>
+    <list default="true" id="2ae9d6a2-52cc-4e07-bacc-08375f505db6" name="更改" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -116,22 +46,23 @@
     <option name="sortByType" value="true" />
     <option name="sortKey" value="BY_TYPE" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.app.executor": "Run",
-    "Python.inference_ram_plus_openset.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "F:/Github/yolo-world-with-efficientvit-sam",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.app.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app2.executor&quot;: &quot;Run&quot;,
+    &quot;Python.inference_ram_plus_openset.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;F:/Github/yolo-world-with-efficientvit-sam&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="F:\Github\yolo-world-with-efficientvit-sam" />
@@ -142,7 +73,7 @@
       <recent name="F:\Github\yolo-world-with-efficientvit-sam\weights" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.inference_ram_plus_openset">
+  <component name="RunManager" selected="Python.app">
     <configuration name="app" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="yolo-world-with-efficientvit-sam" />
       <option name="ENV_FILES" value="" />
@@ -158,6 +89,29 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/app.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="app2" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="yolo-world-with-efficientvit-sam" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/app2.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -191,8 +145,9 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.inference_ram_plus_openset" />
         <item itemvalue="Python.app" />
+        <item itemvalue="Python.app2" />
+        <item itemvalue="Python.inference_ram_plus_openset" />
       </list>
     </recent_temporary>
   </component>
@@ -214,6 +169,7 @@
       <updated>1726470175498</updated>
       <workItem from="1726470176766" duration="3631000" />
       <workItem from="1726562740507" duration="7304000" />
+      <workItem from="1726587134919" duration="7517000" />
     </task>
     <servers />
   </component>
@@ -221,7 +177,8 @@
     <option name="version" value="3" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/yolo_world_with_efficientvit_sam$app.coverage" NAME="app 覆盖结果" MODIFIED="1726565614535" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/yolo_world_with_efficientvit_sam$inference_ram_plus_openset.coverage" NAME="inference_ram_plus_openset 覆盖结果" MODIFIED="1726586964867" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/yolo_world_with_efficientvit_sam$app.coverage" NAME="app 覆盖结果" MODIFIED="1726594845866" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/yolo_world_with_efficientvit_sam$app2.coverage" NAME="app2 覆盖结果" MODIFIED="1726594051928" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/yolo_world_with_efficientvit_sam$inference_ram_plus_openset.coverage" NAME="inference_ram_plus_openset 覆盖结果" MODIFIED="1726591676899" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
