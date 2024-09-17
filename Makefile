@@ -1,5 +1,5 @@
 EFFICIENTVIT_SAM_URL := "https://huggingface.co/han-cai/efficientvit-sam/resolve/main"
-EFFICIENTVIT_SAM_MODEL := "xl1.pt"
+EFFICIENTVIT_SAM_MODEL := "weights/xl1.pt"
 
 
 define download
