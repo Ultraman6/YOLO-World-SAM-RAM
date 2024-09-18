@@ -4,19 +4,20 @@ model:
 
   sam:
     name: "xl1"
-    weight_url: "weights/xl1.pt"
+#    weight_url: "weights/xl1.pt"
 
   ram:
-    image_size: 384
-    pretrained: "weights/ram_plus_swin_large_14m.pth"
+    name: "ram_plus"
+#    pretrained: "weights/ram_plus_swin_large_14m.pth"
     vit: "swin_l"
-    llm_tag_des: "datasets/openimages_rare_200/openimages_rare_200_llm_tag_descriptions.json"
-    class_threshold: 0.5
+    image_size: 384
+    llm_tag_des: True
 
 transform:
   image_size: 384
 
 inference:
+  class_threshold: 0.5
   confidence_threshold: 0.3
   nms_threshold: 0.5
 

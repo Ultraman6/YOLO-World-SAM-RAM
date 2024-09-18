@@ -15,11 +15,11 @@ __all__ = ["create_sam_model"]
 
 
 REGISTERED_SAM_MODEL: dict[str, str] = {
-    "l0": "assets/checkpoints/sam/l0.pt",
-    "l1": "assets/checkpoints/sam/l1.pt",
-    "l2": "assets/checkpoints/sam/l2.pt",
-    "xl0": "assets/checkpoints/sam/xl0.pt",
-    "xl1": "assets/checkpoints/sam/xl1.pt",
+    "l0": "weights/sam/l0.pt",
+    "l1": "weights/sam/l1.pt",
+    "l2": "weights/sam/l2.pt",
+    "xl0": "weights/sam/xl0.pt",
+    "xl1": "weights/sam/xl1.pt",
 }
 
 

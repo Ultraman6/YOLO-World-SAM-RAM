@@ -4,7 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2ae9d6a2-52cc-4e07-bacc-08375f505db6" name="更改" comment="" />
+    <list default="true" id="2ae9d6a2-52cc-4e07-bacc-08375f505db6" name="更改" comment="">
+      <change afterPath="$PROJECT_DIR$/ram/mapping.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/yoloworld/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/efficientvit/sam_model_zoo.py" beforeDir="false" afterPath="$PROJECT_DIR$/efficientvit/sam_model_zoo.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -32,7 +39,7 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="DEPENDENCY_CHECKER_PROBLEMS_TAB" />
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 7
@@ -69,6 +76,8 @@
       <recent name="F:\Github\yolo-world-with-efficientvit-sam\RAM++" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="F:\Github\yolo-world-with-efficientvit-sam\weights\sam" />
+      <recent name="F:\Github\yolo-world-with-efficientvit-sam\weights\ram" />
       <recent name="F:\Github\yolo-world-with-efficientvit-sam" />
       <recent name="F:\Github\yolo-world-with-efficientvit-sam\weights" />
     </key>
@@ -170,7 +179,11 @@
       <workItem from="1726470176766" duration="3631000" />
       <workItem from="1726562740507" duration="7304000" />
       <workItem from="1726587134919" duration="7517000" />
-      <workItem from="1726595037763" duration="316000" />
+      <workItem from="1726595037763" duration="612000" />
+      <workItem from="1726596128846" duration="121000" />
+      <workItem from="1726630586279" duration="11000" />
+      <workItem from="1726630645380" duration="8306000" />
+      <workItem from="1726642186523" duration="2223000" />
     </task>
     <servers />
   </component>
@@ -178,7 +191,8 @@
     <option name="version" value="3" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/yolo_world_with_efficientvit_sam$app.coverage" NAME="app 覆盖结果" MODIFIED="1726594845866" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/yolo_world_with_efficientvit_sam$app.coverage" NAME="app 覆盖结果" MODIFIED="1726638708960" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/YOLO_World_SAM_RAM$app.coverage" NAME="app 覆盖结果" MODIFIED="1726643581986" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/yolo_world_with_efficientvit_sam$app2.coverage" NAME="app2 覆盖结果" MODIFIED="1726594051928" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/yolo_world_with_efficientvit_sam$inference_ram_plus_openset.coverage" NAME="inference_ram_plus_openset 覆盖结果" MODIFIED="1726591676899" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
