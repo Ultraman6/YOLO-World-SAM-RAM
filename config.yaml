@@ -1,25 +1,32 @@
-model:
-  yolo_world:
-    model_id: "yolo_world/l"
+world:
+  version: "ultralytics"
+  type: "yolov8s-world"
 
-  sam:
-    name: "xl1"
-#    weight_url: "weights/xl1.pt"
+ram:
+  version: "ram_plus"
+  type: "swin_l"
+  image_size: 384
+  llm_tag_des: True
 
-  ram:
-    name: "ram_plus"
-#    pretrained: "weights/ram_plus_swin_large_14m.pth"
-    vit: "swin_l"
-    image_size: 384
-    llm_tag_des: True
+sam:
+  version: "efficient"
+  type: "xl1"
 
 transform:
   image_size: 384
 
 inference:
+  # ram
   class_threshold: 0.5
+  # world
   confidence_threshold: 0.3
+  max_det: 100
+  use_amp: False
+  # world-v8
   nms_threshold: 0.5
+  agnostic_nms: False
+  # sam
+  segment_masks: False
 
 gradio:
   server_name: "127.0.0.1"

@@ -92,6 +92,8 @@ class RAM_plus(nn.Module):
                 vision_config_path = f'{CONFIG_PATH}/configs/swin/config_swinL_224.json'
             elif image_size == 384:
                 vision_config_path = f'{CONFIG_PATH}/configs/swin/config_swinL_384.json'
+            else:
+                raise ValueError(f"RAM Only support image size 224 and 384 not {image_size}")
             vision_config = read_json(vision_config_path)
             assert image_size == vision_config['image_res']
             # assert config['patch_size'] == 32
@@ -393,7 +395,7 @@ class RAM_plus(nn.Module):
         for b in range(bs):
             index = np.argwhere(tag[b] == 1)
             token = self.tag_list[index].squeeze(axis=1)
-            tag_output.append(', '.join(token))
+            tag_output.append(','.join(token))
 
         return tag_output
 

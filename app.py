@@ -1,147 +1,120 @@
 """Fast text to segmentation with yolo-world and efficient-vit sam."""
 import copy
-import json
 import os
 from typing import Tuple
-
-import cv2
 import gradio as gr
 import numpy as np
 import supervision as sv
 import torch
+import uvicorn
 import yaml
 from PIL import Image
-from inference.models import YOLOWorld
-from torch import nn
-from ram import inference_ram_openset as inference
-from efficientvit.models.efficientvit.sam import EfficientViTSamPredictor
-from efficientvit.sam_model_zoo import create_sam_model, REGISTERED_SAM_MODEL
+from fastapi import FastAPI
+
 from ram import get_transform
-from ram.mapping import REGISTERED_RAM, llm_tag_des_url, REGISTERED_RAM_MODEL, REGISTERED_VIT_MODEL
-from ram.models import ram_plus
-from ram.utils import build_openset_llm_label_embedding
+from sam.segment_anything_2.build_sam import SAM2_WEIGHTS_PATH
+from world.groundingdino.model import DINO_WEIGHTS_PATH
+from world.mm.model import MM_WEIGHTS_PATH
+from world.ultralytics.solutions.isolate_segment import IsolateSegment
+from model_zoo import (REGISTERED_SAM_MODEL, REGISTERED_RAM_MODEL,
+                       REGISTERED_WORLD_MODEL, REGISTERED_MODEL, REGISTERED_NAME, _WORLD, _RAM, _SAM, )
+from world.ultralytics.solutions.object_crop import ObjectCropper
 
 # Load configuration from YAML file
 with open('config.yaml', 'r') as f:
     config = yaml.safe_load(f)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# Load annotators.
-BOUNDING_BOX_ANNOTATOR = sv.BoundingBoxAnnotator()
-MASK_ANNOTATOR = sv.MaskAnnotator()
-LABEL_ANNOTATOR = sv.LabelAnnotator()
+
 
 # Placeholder for models, initially set to None.
 yolo_world, sam, ramp = None, None, None
-transform = None
+OBJ_CROP = ObjectCropper()
+ISO_SEG = IsolateSegment(
+     # save_isolated=True, save_cropped=True,
+     isolate_output_dir='isolated_results',
+     crop_output_dir='cropped_results',
+     isolate_background='green',
+     crop_background='green',
+ )
 
+global crop_box
 
-# Function to load models based on user-provided configuration
-def load_models(m_cfg, log_output):
-    global yolo_world, sam, ramp
-    log_output.append("Starting model loading...")
+def _load_world(world_version, world_type, world_url):
+    global yolo_world
+    yolo_world = _WORLD(world_version, world_url)
+    return "World model loaded successfully!"
 
-    try:
-        yolo_world = YOLOWorld(model_id=m_cfg['yolo_world']['model_id'])
-        log_output.append(f"YOLOWorld model {m_cfg['yolo_world']['model_id']} loaded.")
+def _load_sam(sam_version, sam_type, sam_url):
+    global sam
+    sam = _SAM(sam_version, sam_url)
+    return "SAM model loaded successfully!"
 
-        sam = EfficientViTSamPredictor(
-            create_sam_model(name=m_cfg['sam']['name'], weight_url=m_cfg['sam']['weight_url']).to(device).eval()
-        )
-        log_output.append(f"SAM model {m_cfg['sam']['name']} loaded.")
+def _load_ram(ram_version, ram_type, ram_url, img_size, llm_tag_des):
+    global ramp
+    ramp = _RAM(ram_version, ram_type, ram_url, img_size, llm_tag_des)
+    return "RAM model loaded successfully!"
 
-        # Load RAM++ model
-        ramp = REGISTERED_RAM[m_cfg['ram']['name']](pretrained=m_cfg['ram']['pretrained'],
-                                                    image_size=m_cfg['ram']['img_size'], vit=m_cfg['ram']['vit'])
-
-        log_output.append("Models loaded successfully.")
-    except Exception as e:
-        log_output.append(f"Error loading models: {str(e)}")
-
-    return "\n".join(log_output)
-
+_load_mapping = {
+    'world': _load_world,
+    'sam': _load_sam,
+    'ram': _load_ram,
+}
 
 # Function to handle the model loading with updated parameters.
-def load_all_models(model_id, sam_name, sam_weight_url, img_size,
-                    ram_type, ram_pretrained, llm_tag_des, vit_type):
-    global yolo_world, sam, ramp, transform
-    log_output = []
+def load_models(ram_version, ram_type, ram_url, img_size, llm_tag_des,
+                world_version, world_type, world_url,
+                sam_version, sam_type, sam_url):
+    # 检查必要的参数是否提供
+    states = []
+    states.append(_load_world(world_version, world_type, world_url))
+    states.append(_load_sam(sam_version, sam_type, sam_url))
+    states.append(_load_ram(ram_version, ram_type, ram_url, img_size, llm_tag_des))
 
-    # Checking if files are selected
-    if not sam_weight_url or not ram_pretrained:
-        return "Please select all required files!"
+    return '\n'.join(states)
 
-    # Build model configuration from UI inputs
-    model_cfg = {
-        'yolo_world': {'model_id': model_id},
-        'sam': {'name': sam_name, 'weight_url': sam_weight_url.name},  # Use file name from gr.File()
-        'ram': {
-            'name': ram_type,
-            'pretrained': ram_pretrained.name,  # Use file name from gr.File()
-            'llm_tag_des': llm_tag_des,  # Use file name from gr.File()
-            'img_size': img_size,
-            'vit': vit_type
-        }
-    }
-
-    # Load models and capture logs
-    log_output = load_models(model_cfg, log_output)
-
-    # Set up transform
-    try:
-        ramp.eval()
-        ramp.to(device)
-        log_output += "\nTransform set up successfully."
-    except Exception as e:
-        log_output += f"\nError setting up transform: {str(e)}"
-
-    return log_output
 # Recognize function
-def recognize(image: np.ndarray, class_threshold: float, llm_tag_des: bool, img_size: int) -> Tuple:
-    if llm_tag_des:
-        with open(llm_tag_des_url, 'rb') as fo:
-            llm_tag = json.load(fo)
-        openset_label_embedding, openset_categories = build_openset_llm_label_embedding(llm_tag)
-        ramp.tag_list = np.array(openset_categories)
-        ramp.label_embed = nn.Parameter(openset_label_embedding.float())
-        ramp.num_class = len(openset_categories)
-        ramp.class_threshold = torch.ones(ramp.num_class) * class_threshold
-
-    transform = get_transform(image_size=img_size)
-    image = transform(Image.fromarray(image)).unsqueeze(0).to(device)
-    labels = inference(image, ramp)
+def recognize(image: np.ndarray, class_threshold: float, llm_tag_des: bool, img_size: int):
+    # transform = get_transform(image_size=img_size)
+    # image = transform(Image.fromarray(image)).unsqueeze(0).to(device)
+    ramp._llm_tag_des(llm_tag_des, class_threshold)
+    labels = ramp.infer(image, img_size)
     return labels, copy.deepcopy(labels)
 
 # Detect function
-def detect(image: np.ndarray, query: str, confidence_threshold: float, nms_threshold: float) -> Tuple:
+def detect(image: np.ndarray, query: str, confidence_threshold: float,
+           nms_threshold: float, max_det: int, use_amp: bool, detect_agnostic: bool) -> Tuple:
     categories = [category.strip() for category in query.split(",")]
-    yolo_world.set_classes(categories)
-    results = yolo_world.infer(image, confidence=confidence_threshold)
-    detections = sv.Detections.from_inference(results).with_nms(
-        class_agnostic=True, threshold=nms_threshold
-    )
-    output_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    labels = [f"{categories[class_id]}: {confidence:.2f}" for class_id, confidence in zip(detections.class_id, detections.confidence)]
-    output_image = BOUNDING_BOX_ANNOTATOR.annotate(output_image, detections)
-    output_image = LABEL_ANNOTATOR.annotate(output_image, detections, labels=labels)
-    return cv2.cvtColor(output_image, cv2.COLOR_BGR2RGB), detections
+    yolo_world.set_classes(categories)  # 类别可以是其他之外的
+    ann_img, cls_names, detections = yolo_world.infer(image, score_thr=confidence_threshold,
+                                  max_det=max_det, nms_thr=nms_threshold, amp=use_amp, agnostic=detect_agnostic)
+    # ann_img = cv2.cvtColor(ann_img, cv2.COLOR_BGR2RGB)
+    OBJ_CROP.names = cls_names
+    if sam is not None:
+        sam.set_classes(cls_names)
+    return ann_img, detections, gr.update(choices=cls_names)
+
+def crop(image: np.ndarray, detections: sv.Detections, classes: list):
+    res_dict = OBJ_CROP.crop_objects(image, detections, classes)
+    return res_dict
 
 # Segment function
-def segment(image: np.ndarray, detections: sv.Detections) -> np.ndarray:
-    sam.set_image(image, image_format="RGB")
-    masks = []
-    for xyxy in detections.xyxy:
-        mask, _, _ = sam.predict(box=xyxy, multimask_output=False)
-        masks.append(mask.squeeze())
-    detections.mask = np.array(masks)
-    output_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    output_image = MASK_ANNOTATOR.annotate(output_image, detections)
-    return cv2.cvtColor(output_image, cv2.COLOR_BGR2RGB)
+def segment(image: np.ndarray, detections, masks: bool):
+    ann_img, segments, cls_names = sam.infer(image, detections, masks=masks)
+    ISO_SEG.names = cls_names
+    return ann_img, segments, gr.update(choices=cls_names)
+
+
+def iso(image: np.ndarray, detections: sv.Detections, classes: list):
+    res_dict = OBJ_CROP.crop_objects(image, detections, classes)
+    return res_dict
+
 
 def update_sam(sel):
     # 根据选中的模型名称，返回相应的路径
     file_path = REGISTERED_SAM_MODEL.get(sel, "No path available")
     return file_path
+
 
 def update_ram(sel):
     # 根据选中的模型名称，返回相应的路径
@@ -149,53 +122,94 @@ def update_ram(sel):
     return file_path
 
 
+def link_low(state, *params):
+    values = REGISTERED_MODEL[state]
+    for param in params:
+        if param is None:
+            return None
+        if type(values) is list and param in values:
+            return param  # 底层list
+        values = values[param]
+    if type(values) == dict:
+        values = list(values.keys())    # 中层keys
+        return gr.update(choices=values, value=None)
+    elif type(values) == list:
+        return gr.update(choices=values, value=None)  # 下层list
+    elif type(values) == str:  # 底层值
+        return values
+
+def change_params(pack):
+    print(pack)
+    k, s = pack.keys()
+    key, state = pack[k], pack[s]
+    state[k] = key
+    return state
+
 # Gradio interface
 def interface():
     with gr.Blocks() as app:
+        unit_list = []
+        load_message = gr.Textbox(label="Load Models", value="Please load models first!")
         with gr.Row():
             # Configuration UI section for the models and inference parameters
-            with gr.Column():
-                gr.Markdown("### YOLOWorld Configuration")
-                world_type = gr.Dropdown(value=config['model']['yolo_world']['model_id'],
-                                         choices=["yolo_world/l", "yolo_world/x"], label="YOLO World Type")
-            with gr.Column():
-                gr.Markdown("### SAM Configuration")
-                sam_type = gr.Dropdown(value=config['model']['sam']['name'],
-                                       choices=list(REGISTERED_SAM_MODEL.keys()), label="SAM Model Type")
-                sam_weight_url = gr.File(label="SAM Weight File", value=REGISTERED_SAM_MODEL[sam_type.value])
-                sam_type.change(
-                    fn=update_sam,
-                    inputs=sam_type,
-                    outputs=sam_weight_url
-                )
-            with gr.Column():
-                gr.Markdown("### RAM++ Configuration")
-                ram_type = gr.Dropdown(choices=list(REGISTERED_RAM_MODEL.keys()),
-                                       label="RAM Type", value=config['model']['ram']['name'])
-                ram_pretrained = gr.File(label="RAM Pretrained Path", value=REGISTERED_RAM_MODEL[ram_type.value])
-                ram_type.change(
-                    fn=update_ram,
-                    inputs=ram_type,
-                    outputs=ram_pretrained
-                )
-                vit_type = gr.Dropdown(choices=REGISTERED_VIT_MODEL,
-                                       label="VIT Type", value=config['model']['ram']['vit'])
-                img_size = gr.Dropdown(choices=[224, 384], value=config['model']['ram']['image_size'],
-                                       label="RAM Input Size for model")
-                llm_tag_des = gr.Checkbox(label="OpenSet LLM Tag", value=config['model']['ram']['llm_tag_des'])
+            for model, REGISTERED in REGISTERED_MODEL.items():
+                param_list = []
+                with gr.Column():
+                    gr.Markdown(f"### {REGISTERED_NAME[model]} Configuration")
+                    model_version = gr.Dropdown(value=config[model]['version'],
+                                              choices=list(REGISTERED.keys()),
+                                              label='Version')
+                    model_type = gr.Dropdown(value=config[model]['type'],
+                                           choices=list(REGISTERED[model_version.value].keys()),
+                                           label='Type')
+                    model_url = gr.State(value=REGISTERED_MODEL[model][model_version.value][model_type.value])
+
+                    @gr.render(inputs=model_url)
+                    def render_url(url):
+                        if url in REGISTERED_WORLD_MODEL['roboflow']:
+                            return None
+                        if url in REGISTERED_WORLD_MODEL['mm']:
+                            url = os.path.join(MM_WEIGHTS_PATH, f'{url}.pth')
+                        if url in REGISTERED_WORLD_MODEL['dino']:
+                            url = os.path.join(DINO_WEIGHTS_PATH, f'{url}.pth')
+                        if url in REGISTERED_SAM_MODEL['segment_anything_2']:
+                            url = os.path.join(SAM2_WEIGHTS_PATH, f'{url}.pt')
+                        gr.File(label="Weight File", value=url)
+
+                    model_load = gr.Button(f'Load {REGISTERED_NAME[model]}')
+
+                    model_version.change(
+                        fn=link_low,
+                        inputs=[gr.State(model), model_version],
+                        outputs=[model_type]
+                    )
+                    model_type.change(
+                        fn=link_low,
+                        inputs=[gr.State(model), model_version, model_type],
+                        outputs=[model_url]
+                    )
+                    param_list.extend([model_version, model_type, model_url])
+                    if model == 'ram':
+                        img_size = gr.Dropdown(choices=[224, 384], value=config['ram']['image_size'],
+                                               label="RAM Input Size for model")
+                        llm_tag_des = gr.Checkbox(label="OpenSet LLM Tag", value=config['ram']['llm_tag_des'])
+                        param_list.extend([img_size, llm_tag_des])
+
+                    unit_list.extend(param_list)
+
+                    model_load.click(  # 就地函数
+                        fn=_load_mapping[model],
+                        inputs=param_list,
+                        outputs=load_message
+                    )
 
         load_button = gr.Button("Load Models")
-        load_output = gr.Textbox(label="Model Loading Status")
 
         # Model loading button click event
         load_button.click(
-            fn=load_all_models,
-            inputs=[world_type,
-                    sam_type, sam_weight_url, img_size,
-                    ram_type, ram_pretrained, llm_tag_des,
-                    vit_type
-                    ],
-            outputs=load_output
+            fn=load_models,
+            inputs=unit_list,
+            outputs=load_message
         )
 
         with gr.Row():
@@ -213,36 +227,106 @@ def interface():
                                       step=0.01, label="Confidence Threshold")
                 detect_nms = gr.Slider(minimum=0, maximum=1, value=config['inference']['nms_threshold'], step=0.01,
                                        label="NMS Threshold")
+                detect_det = gr.Slider(minimum=0, maximum=300, value=config['inference']['max_det'], step=1,
+                                       label="Max Detections")
+                detect_amp = gr.Checkbox(value=config['inference']['use_amp'], label="amp Inference")
+                detect_agnostic = gr.Checkbox(value=config['inference']['agnostic_nms'], label="Class Agnostic NMS")
+
                 detect_button = gr.Button("Detect")
                 detections = gr.State()  # Store detection results
 
             with gr.Column():
                 segmented_image = gr.Image(type="numpy", label="Segmented Image")
+                segment_masks = gr.Checkbox(value=config['inference']['segment_masks'], label="Retina or Multi Masks")
                 segment_button = gr.Button("Segment")
+                segments = gr.State()  # Store detection results
+
+        with gr.Row():
+            with gr.Column():
+                crop_label = gr.CheckboxGroup(label="请选择裁剪类别")
+                crop_tf = gr.Slider(label='标签厚度', minimum=0, maximum=10, step=1)
+                crop_button = gr.Button("Crop")
+                crop_res = gr.State({})
+
+                @gr.render(inputs=crop_res)
+                def render_crop(res_dict):
+                    if len(res_dict) > 0:
+                        with gr.Accordion("bbox裁剪结果"):
+                            for cls, objs in res_dict.items():
+                                with gr.Accordion(label=f"{cls}"):
+                                    for i, obj in enumerate(objs):
+                                        gr.Image(obj, label=f"{cls} {i}")
+
+            with gr.Column():
+                iso_label = gr.CheckboxGroup(label="请选择孤立类别")
+                with gr.Row():
+                    iso_back_color = gr.ColorPicker(label="孤立背景颜色")
+                    iso_back_trans = gr.Checkbox(label="孤立背景颜色透明")
+                with gr.Row():
+                    iso_crop_color = gr.ColorPicker(label="裁剪背景颜色")
+                    iso_crop_trans = gr.Checkbox(label="孤立背景颜色透明")
+                iso_is_crop = gr.Checkbox(label="是否裁剪隔离对象")
+
+                iso_button = gr.Button("Iso")
+                iso_res = gr.State(())
+
+                @gr.render(inputs=iso_res)
+                def render_crop(res):
+                    if len(res) > 1:
+                        res_dict, whole = res[0], res[1]
+                        with gr.Accordion("mask孤立结果"):
+                            for cls, objs in res_dict.items():
+                                with gr.Accordion(label=f"{cls}"):
+                                    for i, obj in enumerate(objs):
+                                        gr.Image(obj, label=f"{cls} {i}", type="numpy")
+                            with gr.Accordion(label="Whole"):
+                                gr.Image(whole, label=f"whole after iso")
 
         # Recognize function binding
         recognize_button.click(
             fn=recognize,
-            inputs=[input_image, class_threshold],
+            inputs=[input_image, class_threshold, llm_tag_des, img_size],
             outputs=[recognize_label, detect_label]
         )
 
         # Detect function binding
         detect_button.click(
             fn=detect,
-            inputs=[input_image, detect_label, detect_ct, detect_nms],
-            outputs=[detected_image, detections]
+            inputs=[input_image, detect_label, detect_ct,
+                    detect_nms, detect_det, detect_amp, detect_agnostic],
+            outputs=[detected_image, detections, crop_label]
+        )
+
+        # Crop function binding
+        crop_button.click(
+            fn=OBJ_CROP.crop_objects,
+            inputs=[input_image, detections,
+                    crop_label, crop_tf],
+            outputs=[crop_res]
         )
 
         # Segment function binding
         segment_button.click(
             fn=segment,
-            inputs=[input_image, detections],
-            outputs=segmented_image
+            inputs=[input_image, detections, segment_masks],
+            outputs=[segmented_image, segments, iso_label]
+        )
+
+        # Iso function binding
+        iso_button.click(
+            fn=ISO_SEG.process,
+            inputs=[input_image, segments, iso_label, iso_back_color,
+                    iso_back_trans, iso_crop_color, iso_crop_trans, iso_is_crop],
+            outputs=[iso_res]
         )
 
     return app
 
 
 # Launch application
-interface().launch(server_name='127.0.0.1', share=True)
+# interface().launch(server_name='127.0.0.1', share=True, server_port=8080, debug=True)
+app = FastAPI()
+app = gr.mount_gradio_app(app, interface(), path='')
+if __name__ == '__main__':
+    os.chdir("F:/Github/YOLO-World-SAM-RAM")  # 设置工作路径
+    uvicorn.run(app, access_log=False)
