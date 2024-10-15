@@ -34,7 +34,6 @@ def build_sam2(
             "++model.sam_mask_decoder_extra_args.dynamic_multimask_stability_thresh=0.98",
         ]
     # Read config and init model
-    print(config_file)
     cfg = compose(config_name=config_file, overrides=hydra_overrides_extra)
     OmegaConf.resolve(cfg)
     model = instantiate(cfg.model, _recursive_=True)
@@ -103,10 +102,10 @@ class SAM2:
         model_cfg = os.path.join(SAM2_PRETRAIN_PATH, f'{model_id}.yaml')
         sam2_checkpoint = os.path.join(SAM2_WEIGHTS_PATH, f'{model_id}.pt')
 
-        sam2_model = build_sam2(model_cfg, sam2_checkpoint, device="cuda")
-        self.predictor = SAM2ImagePredictor(sam2_model)  # for single image
+        self.sam = build_sam2(model_cfg, sam2_checkpoint, device="cuda")
+        self.predictor = SAM2ImagePredictor(self.sam)  # for single image
         # self.vid_predictor = build_sam2_video_predictor(model_cfg, sam2_checkpoint)  # for video
-        # self.mask_generator = SAM2AutomaticMaskGenerator(sam2_model)  # seg_everything
+        # self.mask_generator = SAM2AutomaticMaskGenerator(self.sam)  # seg_everything
 
     def set_image(self, img):
         self.predictor.set_image(img)

@@ -31,7 +31,7 @@ __all__ = [
 ]
 
 
-def save_exp_config(exp_config: dict, path: str, name="config.yaml") -> None:
+def save_exp_config(exp_config: dict, path: str, name="base_config.yaml") -> None:
     if not is_master():
         return
     dump_config(exp_config, os.path.join(path, name))

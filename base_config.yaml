@@ -1,0 +1,65 @@
+WORLD-SAM:
+  world:
+    version: "ultralytics"
+    type: "yolov8s-world"
+  ram:
+    version: "ram_plus"
+    type: "swin_l"
+    image_size: 384
+    llm_tag_des: True
+  sam:
+    version: "efficient"
+    type: "xl1"
+  transform:
+    image_size: 384
+  inference:
+    # ram
+    class_threshold: 0.5
+    # world
+    confidence_threshold: 0.3
+    max_det: 100
+    use_amp: False
+    # world-v8
+    nms_threshold: 0.5
+    agnostic_nms: False
+    # sam
+    segment_masks: False
+
+
+ALL-SAM:
+  sam:
+    version: "efficient"
+    type: "xl1"
+  semantic:
+    num_class: 104
+    area_thr: 0
+    ratio_thr: 0.5
+    top_k: 80
+  semantic:
+  confidence_threshold: 0.5
+  opts:
+    - 'MODEL.WEIGHTS'
+    - 'F:/Github/FoodSAM/ckpts/Unified_learned_OCIM_RS200_6x+2x.pth'
+  output: 'Output/Panoramic_Results'
+  semantic_config: 'F:/Github/FoodSAM/configs/SETR_MLA_768x768_80k_base.py'
+  semantic_checkpoint: 'F:/Github/FoodSAM/ckpts/SETR_MLA/iter_80000.pth'
+  color_list_path: 'F:/Github/FoodSAM/FoodSAM/tools/color_list.npy'
+  category_txt: 'F:/Github/FoodSAM/FoodSAM/tools/category_id_files/foodseg103_category_id.txt'
+  detection_config: 'F:/Github/FoodSAM/configs/Unified_learned_OCIM_RS200_6x+2x.yaml'
+  amg:
+    points_per_side: null
+    points_per_batch: null
+    pred_iou_thresh: null
+    stability_score_thresh: null
+    stability_score_offset: null
+    box_nms_thresh: null
+    crop_n_layers: null
+    crop_nms_thresh: null
+    crop_overlap_ratio: null
+    crop_n_points_downscale_factor: null
+    min_mask_region_area: null
+
+
+#gradio:
+#  server_name: "127.0.0.1"
+#  share: true

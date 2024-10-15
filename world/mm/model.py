@@ -5,7 +5,7 @@ import os.path as osp
 import sys
 import cv2
 import torch
-from torchvision.ops import nms
+
 from mmengine.config import Config
 from mmengine.dataset import Compose
 from mmdet.apis import init_detector

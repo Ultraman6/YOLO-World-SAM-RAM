@@ -195,7 +195,7 @@ class SamAutomaticMaskGenerator:
         return curr_anns
 
     def _generate_masks(self, image: np.ndarray) -> MaskData:
-        orig_size = image.shape[:2]
+        orig_size = image.shape[:2]  # 产生全图的prompt
         crop_boxes, layer_idxs = generate_crop_boxes(
             orig_size, self.crop_n_layers, self.crop_overlap_ratio
         )

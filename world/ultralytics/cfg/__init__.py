@@ -200,7 +200,7 @@ def cfg2dict(cfg):
 
     Examples:
         Convert a YAML file path to a dictionary:
-        >>> config_dict = cfg2dict("config.yaml")
+        >>> config_dict = cfg2dict("base_config.yaml")
 
         Convert a SimpleNamespace to a dictionary:
         >>> from types import SimpleNamespace
@@ -237,7 +237,7 @@ def get_cfg(cfg: Union[str, Path, Dict, SimpleNamespace] = DEFAULT_CFG_DICT, ove
     Examples:
         >>> from ultralytics.cfg import get_cfg
         >>> config = get_cfg()  # Load default configuration
-        >>> config = get_cfg("path/to/config.yaml", overrides={"epochs": 50, "batch_size": 16})
+        >>> config = get_cfg("path/to/base_config.yaml", overrides={"epochs": 50, "batch_size": 16})
 
     Notes:
         - If both `cfg` and `overrides` are provided, the values in `overrides` will take precedence.

@@ -5,6 +5,7 @@ import numpy as np
 import supervision as sv
 import torch
 from PIL import Image
+from groundingdino.util import box_ops
 from torchvision.ops import box_convert
 import bisect
 
@@ -93,7 +94,7 @@ def predict(
             for logit
             in logits
         ]
-
+    print(boxes)
     return boxes, logits.max(dim=1)[0], phrases
 
 
@@ -111,7 +112,8 @@ def annotate(image_source: np.ndarray, boxes: torch.Tensor, logits: torch.Tensor
     np.ndarray: The annotated image.
     """
     h, w, _ = image_source.shape
-    boxes = boxes * torch.Tensor([w, h, w, h])
+    # boxes_xyxy = box_ops.box_cxcywh_to_xyxy(boxes) * torch.Tensor([w, h, w, h])
+    boxes = boxes * torch.Tensor([w, h, w, h])  # 非常注意！！！这里是比例坐标
     xyxy = box_convert(boxes=boxes, in_fmt="cxcywh", out_fmt="xyxy").numpy()
     detections = sv.Detections(xyxy=xyxy)
 

@@ -61,8 +61,6 @@ class Ground_Dino:
             all_boxes = torch.cat(all_boxes, dim=0)  # 按维度0拼接
         if all_confs:
             all_confs = torch.cat(all_confs, dim=0)  # 按维度0拼接
-
-
         return image_pil, (all_boxes, all_confs, all_classes)
 
     def image_transform_grounding(self, init_image):

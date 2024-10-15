@@ -10,7 +10,7 @@ from ultralytics.utils.plotting import colors, Annotator
 class ObjectCropper:
     """A class to manage the cropping of objects detected in images."""
 
-    def __init__(self, names=None, thickness=2, save_crops=True, save_dir="crops"):
+    def __init__(self, names=None, thickness=2, save_crops=False, save_dir="crops"):
         """
         Initializes the ObjectCropper with class names and saving options.
 
@@ -32,7 +32,7 @@ class ObjectCropper:
         if self.save_crops and not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
 
-    def crop_objects(self, im0, results, classes_to_crop=None, *params):
+    def crop_objects(self, im0, results, classes_to_crop=None, **kwargs):
         """
         Crops detected objects in the image based on YOLO results.
         Args:
@@ -43,9 +43,11 @@ class ObjectCropper:
         Returns:
             dict: A dictionary containing cropped images organized by class name.
         """
-        print(params)
-        if params is not None:
-            self._set(*params)
+        if type(im0) is str:
+            im0 = cv2.imread(im0)
+            im0 = cv2.cvtColor(im0, cv2.COLOR_BGR2RGB)
+        if kwargs is not None:
+            self._set(**kwargs)
         crop_dict = defaultdict(list)  # Dictionary to store cropped images by class
 
         # Extract detection results
@@ -81,9 +83,10 @@ class ObjectCropper:
         if self.crop_tf > 0:
             annotator.box_label(box=box, label=f"{class_name} {conf:.2f}", color=color)
 
-    def _set(self, tf):
-        if tf is not None:
-            self.crop_tf = tf
+    def _set(self, **kwargs):
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
 
     def annotate_image(self, results):
         """

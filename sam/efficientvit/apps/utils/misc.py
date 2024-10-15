@@ -73,7 +73,7 @@ def partial_update_config(config: dict, partial_config: dict) -> dict:
     return config
 
 
-def resolve_and_load_config(path: str, config_name="config.yaml") -> dict:
+def resolve_and_load_config(path: str, config_name="base_config.yaml") -> dict:
     path = os.path.realpath(os.path.expanduser(path))
     if os.path.isdir(path):
         config_path = os.path.join(path, config_name)

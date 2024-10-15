@@ -10,6 +10,7 @@ import torch
 
 from functools import partial
 from sam.segment_anything.automatic_mask_generator import SamAutomaticMaskGenerator
+from sam.segment_anything.modeling.mask_decoder_pa import MaskDecoderPA
 from sam.segment_anything.predictor import SamPredictor
 from sam.segment_anything.modeling import ImageEncoderViT, MaskDecoder, PromptEncoder, Sam, TwoWayTransformer
 
@@ -111,20 +112,21 @@ def _build_sam(
 
 
 class SAM:
-    def  __init__(self, model_id):
+    def  __init__(self, model_id, use_path=False):
         use_sam2 = False
         if not use_sam2:
             match = re.search(r'vit_[lh]', model_id)
-            print(match)
             if match:
                 model_type = match.group(0)
             else:
                 raise ValueError("Model type not found in the URL")
             print("Loading model")
-            sam = sam_model_registry[model_type](checkpoint=model_id).to('cuda')
+            self.sam = sam_model_registry[model_type](checkpoint=model_id).to('cuda')
             print("Finishing loading")
-            self.predictor = SamPredictor(sam)
-            self.mask_generator = SamAutomaticMaskGenerator(sam)  # 全自动sam
+            self.predictor = SamPredictor(self.sam)
+            if use_path:
+                self.net = MaskDecoderPA(model_type)
+            # self.mask_generator = SamAutomaticMaskGenerator(self.sam)  # 全自动sam
 
     def set_image(self, img):
         self.predictor.set_image(img)

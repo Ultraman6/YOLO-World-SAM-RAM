@@ -1,16 +1,20 @@
 import json
 import os
-from typing import Union
+from copy import deepcopy
+from typing import Union, Tuple
 
 from PIL import Image
 import cv2
 import numpy as np
 import torch
 from torch import nn
+from torchvision.ops import box_convert
 
 from ram import inference_ram_openset as inference
 from ram import get_transform
 from ram.utils import build_openset_llm_label_embedding
+from sam.segment_anything.build_sam_hq import SAM_hq
+from sam.segment_anything.utils.transforms import ResizeLongestSide
 from sam.segment_anything_2 import SAM2
 from world.groundingdino.model import Ground_Dino
 from world.groundingdino.util.inference import annotate
@@ -102,10 +106,6 @@ REGISTERED_SAM_MODEL = {
     'segment_anything': {
         'sam_h': 'weights/sam/segment_anything/sam_vit_h_4b8939.pth' ,
         'sam_l': 'weights/sam/segment_anything/sam_vit_l_0b3195.pth',
-        'sam_hq_tiny': 'weights/sam/segment_anything_hq/sam_hq_vit_t.pth',
-        'sam_hq_b': 'weights/sam/segment_anything_hq/sam_hq_vit_b.pth',
-        'sam_hq_h': 'weights/sam/segment_anything_hq/sam_hq_vit_h.pth',
-        'sam_hq_l': 'weights/sam/segment_anything_hq/sam_hq_vit_l.pth',
     },
     'segment_anything_hq': {
         'sam_hq_tiny': 'weights/sam/segment_anything/sam_vit_l_0b3195.pth',
@@ -113,6 +113,11 @@ REGISTERED_SAM_MODEL = {
         'sam_hq_h': 'weights/sam/segment_anything/sam_vit_l_0b3195.pth',
         'sam_hq_l': 'weights/sam/segment_anything/sam_vit_l_0b3195.pth',
     },
+    # 'segment_anything_pa': {
+    #     'sam_pa_b': 'weights/sam/segment_anything_pa/sam_vit_b_maskdecoder.pth',
+    #     'sam_pa_h': 'weights/sam/segment_anything_pa/sam_vit_h_maskdecoder.pth',
+    #     'sam_pa_l': 'weights/sam/segment_anything_pa/sam_vit_l_maskdecoder.pth',
+    # },
     'segment_anything_2': [
         'sam2_hiera_b+',
         'sam2_hiera_l',
@@ -205,7 +210,6 @@ class _RAM:
         img = Image.fromarray(img)
         img = transform(img)
         img = img.unsqueeze(0).to('cuda:0')
-        print(type(img))
         self.model.eval()
         self.model = self.model.to('cuda:0')
         return inference(img, self.model)
@@ -214,7 +218,7 @@ class _RAM:
 class _SAM:
     def __init__(self, version, url):
         overrides = dict(task="segment", mode="predict", model=url, retina_masks=True)
-        if version in ['v1', 'v2', 'mobile']:
+        if version in ['ultralytics']:
             self.model = SAMPredictor(overrides=overrides)
         elif version in ['fast']:
             # model = FastSAM("FastSAM-s.pt")
@@ -222,7 +226,11 @@ class _SAM:
         elif version in ['efficient']:
             name = url.split("/")[-1].split(".")[0]
             self.model = EfficientViTSamPredictor(create_sam_model(name=name, weight_url=url).to('cuda:0').eval())
-        elif version == 'segment_anything':
+        elif version in ['segment_anything']:
+            self.model = SAM(model_id=url)
+        elif version == 'segment_anything_hq':
+            self.model = SAM_hq(model_id=url)
+        elif version in ['segment_anything_pa']:
             self.model = SAM(model_id=url)
         elif version == 'segment_anything_2':
             self.model = SAM2(model_id=url)
@@ -235,6 +243,13 @@ class _SAM:
 
     def check_mask(self, mask):
         return
+
+    @property
+    def sam(self):
+        if hasattr(self.model, 'sam'):
+            return self.model.sam
+        else:
+            raise ValueError("The model has no attribute 'sam'.")
 
     def infer(self, img, detections, masks=False):
         boxes, classes, confs = detections
@@ -250,18 +265,18 @@ class _SAM:
                 er = self.model(img)
                 results = self.model.prompt(er, bboxes=box)
                 mask = results[0].masks.data.cpu().numpy()
-                print(mask, mask.shape)
                 mask = mask.astype(bool)
-                print(mask, mask.shape)
                 mask_list.append(mask.squeeze())
-            elif self.version in ['v1', 'v2', 'mobile']:
+            elif self.version in ['ultralytics']:
                 assert isinstance(self.model, SAMPredictor)
                 results = self.model(img, bboxes=box, retina_masks=masks)
                 mask = results[0].masks.data.cpu().numpy()
                 mask_list.append(mask.squeeze())
-            elif self.version in ['segment_anything', 'segment_anything_2']:
+            elif self.version in ['segment_anything', 'segment_anything_2',
+                                  'segment_anything_hq', 'segment_anything_pa']:
                 assert (isinstance(self.model, SAM)
-                        or isinstance(self.model, SAM2))
+                        or isinstance(self.model, SAM2)
+                        or isinstance(self.model, SAM_hq))
                 self.model.set_image(img)
                 mask, _, _ = self.model.infer(box=box)
                 mask_list.append(mask.squeeze())
@@ -301,8 +316,7 @@ class _SAM:
             if name not in cls_names:
                 cls_names.append(name)
 
-        return img, results, cls_names
-
+        return img, (boxes, classes, masks), cls_names
 
 class _WORLD:
 
@@ -324,6 +338,7 @@ class _WORLD:
         self.model.set_classes(classes)
 
     def infer(self, image, score_thr=0.3, max_det=100, nms_thr=0.5, amp=False, agnostic=False):
+        self.origin_shape = image.shape
         if self.version == 'ultralytics':
             results = self.model.predict(image, amp=amp, conf=score_thr,
                                          iou=nms_thr, max_det=max_det, agnostic_nms=agnostic)
@@ -359,9 +374,11 @@ class _WORLD:
             classes = result.class_id
             confs = result.confidence
         elif self.version == 'dino':
-            result = results[1]
+            result = results[1]  # 前后size对齐
             boxes, confs, labels = result
-            boxes = boxes.cpu().numpy().astype(np.float64)
+            oh, ow = self.origin_shape[:2]
+            boxes *= torch.Tensor([ow, oh, ow, oh])
+            boxes = box_convert(boxes=boxes, in_fmt="cxcywh", out_fmt="xyxy").numpy()
             confs = confs.cpu().numpy().astype(np.float16)
             classes = [self.names.index(label) for label in labels]
             classes = np.array(classes, dtype=np.int8)
@@ -404,7 +421,7 @@ class _WORLD:
         id_map = {id: i for i, id in enumerate(id for id in range(len(self.names)) if id in classes)}
         filter_names = [self.names[id] for id in id_map]
         filter_classes = np.array([id_map[cis] for cis in classes], dtype=np.int8)
-        print(boxes, filter_classes, confs)
+
         return ann_img, filter_names, (boxes, filter_classes, confs)
 
 

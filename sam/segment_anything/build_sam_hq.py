@@ -1,5 +1,6 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
+import re
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
@@ -8,11 +9,28 @@ import torch
 
 from functools import partial
 
+from . import SamPredictor, SamAutomaticMaskGenerator
+from .automatic_mask_generator_hq import SamAutomaticMaskGeneratorHQ
 from .modeling import ImageEncoderViT, MaskDecoderHQ, PromptEncoder, Sam, TwoWayTransformer
+from .modeling.image_encoder_hq import ImageEncoderViTHQ
+from .predictor_hq import SamPredictorHQ
+
+def _load_sam_checkpoint(sam: Sam, checkpoint=None):
+    sam.eval()
+    if checkpoint is not None:
+        with open(checkpoint, "rb") as f:
+            state_dict = torch.load(f, map_location="cpu")
+        info = sam.load_state_dict(state_dict, strict=False)
+        print(info)
+    for _, p in sam.named_parameters():
+        p.requires_grad = False
+    return sam
+
+
 
 
 def build_sam_hq_vit_h(checkpoint=None):
-    return _build_sam(
+    return _build_sam_hq(
         encoder_embed_dim=1280,
         encoder_depth=32,
         encoder_num_heads=16,
@@ -25,7 +43,7 @@ build_sam_hq = build_sam_hq_vit_h
 
 
 def build_sam_hq_vit_l(checkpoint=None):
-    return _build_sam(
+    return _build_sam_hq(
         encoder_embed_dim=1024,
         encoder_depth=24,
         encoder_num_heads=16,
@@ -35,7 +53,7 @@ def build_sam_hq_vit_l(checkpoint=None):
 
 
 def build_sam_hq_vit_b(checkpoint=None):
-    return _build_sam(
+    return _build_sam_hq(
         encoder_embed_dim=768,
         encoder_depth=12,
         encoder_num_heads=12,
@@ -52,7 +70,7 @@ sam_hq_model_registry = {
 }
 
 
-def _build_sam(
+def _build_sam_hq(
     encoder_embed_dim,
     encoder_depth,
     encoder_num_heads,
@@ -64,7 +82,7 @@ def _build_sam(
     vit_patch_size = 16
     image_embedding_size = image_size // vit_patch_size
     sam = Sam(
-        image_encoder=ImageEncoderViT(
+        image_encoder=ImageEncoderViTHQ(
             depth=encoder_depth,
             embed_dim=encoder_embed_dim,
             img_size=image_size,
@@ -100,15 +118,38 @@ def _build_sam(
         pixel_mean=[123.675, 116.28, 103.53],
         pixel_std=[58.395, 57.12, 57.375],
     )
-    # sam.eval()
-    if checkpoint is not None:
-        with open(checkpoint, "rb") as f:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            state_dict = torch.load(f, map_location=device)
-        info = sam.load_state_dict(state_dict, strict=False)
-        print(info)
-    for n, p in sam.named_parameters():
-        if 'hf_token' not in n and 'hf_mlp' not in n and 'compress_vit_feat' not in n and 'embedding_encoder' not in n and 'embedding_maskfeature' not in n:
-            p.requires_grad = False
+    return _load_sam_checkpoint(sam, checkpoint)
 
-    return sam
+
+class SAM_hq:
+    def  __init__(self, model_id):
+        use_sam2 = False
+        if not use_sam2:
+            match = re.search(r'vit_[lh]', model_id)
+            print(match)
+            if match:
+                model_type = match.group(0)
+            else:
+                raise ValueError("Model type not found in the URL")
+            print("Loading model")
+            self.sam = sam_hq_model_registry[model_type](checkpoint=model_id).to('cuda')
+            print("Finishing loading")
+            self.predictor = SamPredictorHQ(self.sam, True)
+            # self.mask_generator = SamAutomaticMaskGeneratorHQ(self.sam)  # 全自动sam
+
+    def set_image(self, img):
+        self.predictor.set_image(img)
+
+    def infer(self, box):
+        masks_, scores_, logits_ = self.predictor.predict(
+            point_coords=None,
+            point_labels=None,
+            box=box,
+            multimask_output=False
+        )
+        idx, max_score = 0, 0
+        for i, score in enumerate(scores_):
+            if score > max_score:
+                max_score = score
+                idx = i
+        return masks_[idx], scores_[idx], logits_[idx]

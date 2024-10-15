@@ -1,7 +1,9 @@
 import os
 from collections import defaultdict
+from typing import List
 
 import torch
+from PIL.Image import Image
 from PIL.ImageColor import getrgb
 from ultralytics import YOLO
 import cv2
@@ -11,6 +13,10 @@ import matplotlib.colors as mcolors
 
 from world.ultralytics.utils import ops
 
+# 定义一个函数，将十六进制颜色转换为 RGB
+def hex_to_rgb(hex_color):
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
 def get_rgb_from_matplotlib(color_name: str) -> tuple:
     """
@@ -33,10 +39,10 @@ def get_rgb_from_matplotlib(color_name: str) -> tuple:
 class IsolateSegment:
     def __init__(self,
                  names=None,
-                 isolate_background='black',
-                 background_transparent=False,
-                 crop_background='black',
-                 crop_transparent=False,
+                 isolate_background='#000000',
+                 background_transparent=0,
+                 crop_background='#000000',
+                 crop_transparent=0,
                  is_cropped=False,
                  show=False,
                  save_isolated=False,
@@ -56,10 +62,10 @@ class IsolateSegment:
         if names is None:
             names = []
         self.names = names
-        self.isolate_background = isolate_background  # 隔离时的背景颜色
-        self.isolate_transparent = background_transparent  # 隔离时是否使用透明背景
-        self.crop_background = crop_background    # 裁剪时的背景颜色
-        self.crop_transparent = crop_transparent  # 裁剪时是否使用透明背景
+        self.iso_back = isolate_background  # 隔离时的背景颜色
+        self.iso_trans = background_transparent  # 隔离时是否使用透明背景
+        self.crop_back = crop_background    # 裁剪时的背景颜色
+        self.crop_trans = crop_transparent  # 裁剪时是否使用透明背景
         self.is_cropped = is_cropped  # 是否裁剪隔离对象
         self.save_isolated = save_isolated  # 是否保存隔离后的结果
         self.save_cropped = save_cropped  # 是否保存裁剪后的结果
@@ -84,16 +90,19 @@ class IsolateSegment:
         Returns:
             np.ndarray: 隔离后的图像.
         """
-
-        if self.isolate_transparent:
-            # 将图片转换为 RGBA 格式
-            isolated = np.dstack([img, mask])
-            isolated = cv2.cvtColor(isolated, cv2.COLOR_RGB2RGBA)
-        else:
+        isolated = img.copy()
+        if self.iso_back is not None:
             mask3ch = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-            isolated = cv2.bitwise_and(mask3ch, img)
-            background_img = cv2.cvtColor(np.full_like(img, self.isolate_background, dtype=np.uint8), cv2.COLOR_RGB2BGR)
+            isolated = cv2.bitwise_and(mask3ch, isolated)
+            background_img = cv2.cvtColor(np.full_like(isolated, hex_to_rgb(self.iso_back)[::-1],
+                                                       dtype=np.uint8), cv2.COLOR_RGB2BGR)
             isolated = np.where(mask3ch == 0, background_img, isolated)
+
+        # 将图片转换为 RGBA 格式
+        isolated = cv2.cvtColor(isolated, cv2.COLOR_RGB2RGBA)
+        alpha_channel = np.where(mask != 0, 255,  # 透明度设置
+                                 255 * (1 - self.iso_trans)).astype(np.uint8)
+        isolated[:, :, 3] = alpha_channel
 
         if self.is_cropped:
             x1, y1, x2, y2 = box.astype(np.int32)
@@ -104,80 +113,81 @@ class IsolateSegment:
 
         return isolated, new_mask
 
-    def crop_instance(self, img: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    def crop_instance(self, img: np.ndarray, masks: List[np.ndarray]) -> np.ndarray:
         """
-        在原始图像中裁剪掉分割部分，并根据背景设置填充被裁剪掉的部分.
+        在原始图像中裁剪掉多个分割部分，并根据背景设置填充被裁剪掉的部分.
 
         Args:
             img (np.ndarray): 原始图片.
-            mask (np.ndarray): 分割掩码，实例为1，背景为0.
+            masks (List[np.ndarray]): 分割掩码列表，每个掩码实例为255，背景为0.
+
         Returns:
             np.ndarray: 裁剪并填充后的图像.
         """
-        # 确保掩码和图像维度一致
-        if img.shape[:2] != mask.shape:
-            raise ValueError("Mask and image dimensions must match.")
+        # 确保所有的掩码与图像维度一致
+        for mask in masks:
+            if img.shape[:2] != mask.shape:
+                raise ValueError("All masks and image dimensions must match.")
+
+        # 创建一个初始的空白 mask，与图像尺寸相同
+        combined_mask = np.zeros(img.shape[:2], dtype=np.uint8)
+
+        # 合并所有的 masks，确保任何实例的 mask 都会被保留为255
+        for mask in masks:
+            combined_mask = np.maximum(combined_mask, mask)
+
+        # 复制图像，防止对原始图像进行修改
+        cropped = img.copy()
 
         # 处理背景填充
-        if self.crop_transparent:
-            if img.shape[2] != 4:
-                # 如果图像不是 RGBA 格式，转换为 RGBA
-                cropped = cv2.cvtColor(img, cv2.COLOR_RGB2RGBA)
-            else:
-                cropped = img.copy()
-            # 设置透明度通道，掩码部分透明
-            alpha_channel = np.where(mask == 1, 0, 255).astype(np.uint8)
-            cropped[:, :, 3] = alpha_channel
-        else:
+        if self.crop_back is not None:
             # 获取背景颜色并创建背景图像
-            # background_color = getrgb(self.crop_background)
-            background_img = np.full_like(img, self.crop_background, dtype=np.uint8)
-            # 创建掩码的反掩码，掩码部分为0，背景部分为1
-            mask_inv = (mask == 0).astype(np.uint8)
-            # 将掩码扩展到与图像通道数一致
-            if len(img.shape) == 3 and img.shape[2] == 3:
+            background_img = np.full_like(cropped, hex_to_rgb(self.crop_back)[::-1], dtype=np.uint8)
+            background_img = cv2.cvtColor(background_img, cv2.COLOR_BGR2RGB)
+
+            # 创建反掩码（掩码部分为0，背景部分为1）
+            mask_inv = (combined_mask == 0).astype(np.uint8)
+
+            # 将反掩码扩展到与图像的通道数一致
+            if len(cropped.shape) == 3 and cropped.shape[2] == 3:
                 mask_inv_3ch = np.repeat(mask_inv[:, :, np.newaxis], 3, axis=2)
-            elif len(img.shape) == 3 and img.shape[2] == 4:
+            elif len(cropped.shape) == 3 and cropped.shape[2] == 4:
                 mask_inv_3ch = np.repeat(mask_inv[:, :, np.newaxis], 4, axis=2)
             else:
                 mask_inv_3ch = mask_inv
-            # 用掩码选择保留原始图像或背景颜色
-            cropped = np.where(mask_inv_3ch == 1, img, background_img)
+
+            # 使用反掩码，保留原始图像或者用背景图像填充裁剪的部分
+            cropped = np.where(mask_inv_3ch == 1, cropped, background_img)
+
+        # 如果图像没有透明通道，添加Alpha通道
+        if img.shape[2] != 4:
+            cropped = cv2.cvtColor(cropped, cv2.COLOR_RGB2RGBA)
+
+        # 使用合并的掩码来设置透明通道
+        alpha_channel = np.where(combined_mask == 0, 255, 255 * (1 - self.crop_trans)).astype(np.uint8)
+        cropped[:, :, 3] = alpha_channel
 
         return cropped
 
-    def _set(self, back_color, back_trans, crop_color, crop_trans, is_cropped):
-        if back_color is not None:
-            self.isolate_background = back_color
-        if back_trans:
-            self.isolate_transparent = back_trans
-        if  crop_color is not None:
-            self.crop_background = crop_color
-        if crop_trans is  not None:
-            self.crop_transparent = crop_trans
-        if is_cropped is not None:
-            self.is_cropped = is_cropped
+    def _set(self, **kwargs):
+        for k, v in kwargs.items():
+            if hasattr(self, k):
+                setattr(self, k, v)
 
 
-    def process(self, image, results, classes_to_iso=None, *params):
-        """
-        主处理函数，隔离实例并进行裁剪.
+    def process(self, image, results, classes_to_iso=None, **kwargs):
 
-        Args:
-            image (np.ndarray): 输入图片.
-            results (ultralytics YOLO results): YOLO model's detection results.
-
-        Returns:
-
-        """
-        if params is not None:
-            self._set(*params)
-        res_dict, cropped_img = defaultdict(list), None
-        boxes, classes, confs, masks = results
-        masks = self._xy(masks, image.shape[:-1])
+        self._set(**kwargs)
+        if type(image) is str:
+            image = cv2.imread(image)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        res_dict = defaultdict(list)
+        boxes, classes, masks = results
+        b_masks = []
         # 遍历每个分割的实例
         for idx, (box, cls_idx, mask) in enumerate(zip(boxes, classes, masks)):
-            # class_name = results[0].names[int(cls)]
+            if mask.shape == image.shape[:2]:
+                mask = self._xy(mask, image.shape[:-1])
             cname = self.names[int(cls_idx)]
             if classes_to_iso is not None and cname not in classes_to_iso:
                 continue
@@ -185,15 +195,13 @@ class IsolateSegment:
             b_mask = np.zeros(image.shape[:2], np.uint8)
             contour = mask.astype(np.int32).reshape(-1, 1, 2)
             _ = cv2.drawContours(b_mask, [contour], -1, (255, 255, 255), cv2.FILLED)
-
             # 隔离实例
             isolated_img, new_mask = self.isolate_instance(image, b_mask, box)
-            # isolated_img = self._draw(isolated_img, new_mask, cls_idx, device)
-
+            b_masks.append(b_mask)
             # 根据边界框裁剪实例
-            cropped_img = self.crop_instance(image if cropped_img is None else cropped_img, b_mask)
-            # isolated_img = cv2.cvtColor(isolated_img, cv2.COLOR_BGRA2RGBA)
             res_dict[cname].append(isolated_img)
+
+        cropped_img = self.crop_instance(image, b_masks)
 
         if self.show:
             self._show(res_dict, cropped_img)
@@ -202,34 +210,13 @@ class IsolateSegment:
 
         return res_dict, cropped_img
 
-    # def _draw(self, img, mask, cls_id, device):
-    #     # 获取颜色，并使用 self.tf_color 控制透明度
-    #     color = colors(int(cls_id), True)
-    #     annotator = Annotator(img)
-    #     im_gpu = (
-    #             torch.as_tensor(img, dtype=torch.float16, device=device)
-    #             .permute(2, 0, 1)
-    #             .flip(0)
-    #             .contiguous()
-    #             / 255
-    #     )
-    #     print(mask.shape)
-    #     annotator.masks(torch.tensor([mask], device=device), [color], im_gpu,
-    #                     alpha=self.tf_color, retina_masks=self.hg_res)
-    #
-    #     return img
-
     def _xy(self, mask, orig_shape):
-        if type(mask) is list:
-            return mask
-        elif type(mask) is np.ndarray:
-            mask = torch.from_numpy(mask)
-            return [
-                ops.scale_coords(mask.shape[1:], x, orig_shape, normalize=False)
-                for x in ops.masks2segments(mask)
-            ]
-        else:
-            raise ValueError("Invalid mask type.")
+        masks = np.array([mask,])
+        masks = torch.from_numpy(masks)
+        return [
+            ops.scale_coords(masks.shape[1:], x, orig_shape, normalize=False)
+            for x in ops.masks2segments(masks)
+        ][0]
 
     def annotate_image(self, results):
         """
@@ -286,11 +273,10 @@ if __name__ == "__main__":
 
     segmenter = IsolateSegment(
         m.names,
-        # isolate_background='transparent',
-        # crop_background='transparent',
+        background_transparent=True,
+        crop_transparent=True,
         save_isolated=True,
         save_cropped=True,
-        # show=True,
         isolate_output_dir='isolated_results',
         crop_output_dir='cropped_results',
     )
